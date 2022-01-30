@@ -1,19 +1,27 @@
 # Simple script to test a decision tree on the problem
 
+import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import LeaveOneOut
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import DecisionTreeClassifier, export_graphviz, plot_tree
 
 def main() :
 
     data_file = "../data/data_0.csv"
     labels_file = "../data/labels.csv"
     feature_names_file = "../data/features_0.csv"
+    output_figure = "tree.png"
 
     max_depth = 3
+
+    # read feature names
+    feature_names = []
+    with open(feature_names_file, "r") as fp :
+        feature_names = [f [:-1] for f in fp.readlines() ]
+    print(feature_names)
 
     # read all data
     X = np.genfromtxt(data_file, delimiter=',')
@@ -27,6 +35,21 @@ def main() :
 
     accuracy = accuracy_score(y, y_pred)
     print("Final accuracy score with a decision tree of depth %d: %.4f" % (max_depth, accuracy))
+
+    print("Saving tree figure as \"%s\"..." % output_figure)
+    fig = plt.figure()
+    plot_tree(classifier, feature_names=feature_names, max_depth=max_depth, filled=True)
+    plt.savefig(output_figure, dpi=300)
+    plt.close(fig)
+
+    print("Trying another way to display tree figure...")
+    import graphviz
+
+    dot_data = export_graphviz(classifier, out_file=None,
+                                feature_names=feature_names,
+                                filled=True)
+    graph = graphviz.Source(dot_data, format="png")
+    graph.render("decision_tree_graphivz")
 
     print("Performing a LOOCV:")
     y_pred = []

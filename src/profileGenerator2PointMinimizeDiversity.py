@@ -80,6 +80,11 @@ def fitness_function(discretization, X_original, y, verbose=False) :
 
 def main() :
 
+    # uncomment to set a seed
+    seed = None
+    # seed = 701607 # 0.99 accuracy and 52 different rows
+    seed = 756446 # 0.99 accuracy and 57 different rows
+
     print("Reading data...")
 
     dfData = pd.read_csv("../data/data_0.csv", header=None, sep=',')
@@ -96,7 +101,11 @@ def main() :
     print("Dimension for CMA-ES is: %d" % Dimension)
 
     # setting up CMA-ES
-    es = cma.CMAEvolutionStrategy(Dimension * [0.5], 0.1, {'bounds': [0, 1], 'popsize': 100})
+    options = {'bounds': [0, 1], 'popsize': 100} # boundaries between 0 and 1, size of the population set to 100
+    if seed is not None :
+        options["seed"] = seed
+    es = cma.CMAEvolutionStrategy(Dimension * [0.5], 0.1, options)
+
     while not es.stop():
         candidate_solutions = es.ask()
         es.tell(candidate_solutions, [fitness_function(x, data, labels) for x in candidate_solutions])

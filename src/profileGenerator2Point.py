@@ -14,9 +14,9 @@ from sklearn.utils import resample
 from sklearn.preprocessing import  MinMaxScaler
 from sklearn.preprocessing import StandardScaler
 
-dfData = read_csv("./data/data_0.csv", header=None, sep=',')
+dfData = read_csv("../data/data_0.csv", header=None, sep=',')
 dfData=dfData.values
-dfLabels = read_csv("./data/labels_0.csv", header=None)
+dfLabels = read_csv("../data/labels.csv", header=None)
 dfLabels=dfLabels.values.ravel()
 Dimension=int(len(dfData[0]))
 
@@ -199,5 +199,5 @@ if __name__ == "__main__":
 				tempVal=1
 			X[indexY,indexX]=tempVal
 
-	pd.DataFrame(X).to_csv("./data/Xreduced.csv", header=None, index =None)
-	pd.DataFrame(xtrain).to_csv("./data/xtrain.csv", header=None, index =None)
+	pd.DataFrame(X).to_csv("../data/Xreduced.csv", header=None, index =None)
+	pd.DataFrame(xtrain).to_csv("../data/xtrain.csv", header=None, index =None)

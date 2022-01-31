@@ -60,16 +60,21 @@ def fitness_function(discretization, X_original, y, verbose=False) :
             #performance.append(f1_score(y_test, y_test_pred))
             performance.append(accuracy_score(y_test, y_test_pred))
 
-    # TODO  check how many different rows are created by the discretization process
-    #       and use it as a second fitness
-    
     fitness_accuracy = np.mean(performance)
-    
-    fitness = 1.0 / (1.0 + fitness_accuracy)
 
     if verbose == True :
         print("Mean performance is %.4f" % fitness_accuracy)
         print("Performance:", performance)
+
+    # check how many different rows are created by the discretization process
+    # and use it as a second fitness
+    unique_rows = np.unique(X, axis=0)
+    fitness_diversity = unique_rows.shape[0]
+    if verbose == True : 
+        print("After discretization, there are %d unique rows in the dataset" % unique_rows.shape[0])
+     
+    # compute total (weighted) fitness
+    fitness = 1.0 / (1.0 + fitness_accuracy) + fitness_diversity * 1e-5 # small weight, to make it (hopefully) much less relevant 
 
     return fitness
 
@@ -103,6 +108,12 @@ def main() :
     # print out the result
     print("Best result:", x_best)
     fitness = fitness_function(x_best, data, labels, verbose=True)
+
+    # print out the best individual
+    print("Best individual:")
+    for i in range(0, x_best.shape[0]) :
+        print(x_best[i], end=" ")
+    print()
 
     return
 

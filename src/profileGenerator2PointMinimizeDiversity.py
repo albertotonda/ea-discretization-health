@@ -7,6 +7,7 @@ import pandas as pd
 import sys
 
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import MinMaxScaler
 
@@ -17,15 +18,15 @@ def discretize(discretization, X_original) :
     for i in range(0, X_discretized.shape[0]) :
         for j in range(0, X_discretized.shape[1]) :
             value = X_discretized[i,j]
-            if value <= discretization[i] :
+            if value <= discretization[j] :
                 value = 0
-            elif value > discretization[i] :
+            elif value > discretization[j] :
                 value = 1
             X_discretized[i,j] = value
 
     return X_discretized
 
-def fitness_function(discretization, X_original, y) : 
+def fitness_function(discretization, X_original, y, verbose=False) : 
 
     n_splits = 10
     fitness = 0.0
@@ -43,12 +44,32 @@ def fitness_function(discretization, X_original, y) :
     indexes = [ [index, training, test] for index, [training, test] in enumerate(skf.split(X, y)) ]
 
     # iterate over the folds
+    performance = []
     for fold_index, train_index, test_index in indexes :
 
-        print("Working on fold #%d" % fold_index)
+        #print("Working on fold #%d" % fold_index)
 
         X_train, y_train = X[train_index], y[train_index]
         X_test, y_test = X[test_index], y[test_index]
+
+        for classifier, classifier_name in classifierList :
+
+            classifier.fit(X_train, y_train)
+            y_test_pred = classifier.predict(X_test)
+
+            #performance.append(f1_score(y_test, y_test_pred))
+            performance.append(accuracy_score(y_test, y_test_pred))
+
+    # TODO  check how many different rows are created by the discretization process
+    #       and use it as a second fitness
+    
+    fitness_accuracy = np.mean(performance)
+    
+    fitness = 1.0 / (1.0 + fitness_accuracy)
+
+    if verbose == True :
+        print("Mean performance is %.4f" % fitness_accuracy)
+        print("Performance:", performance)
 
     return fitness
 
@@ -70,14 +91,18 @@ def main() :
     print("Dimension for CMA-ES is: %d" % Dimension)
 
     # setting up CMA-ES
-    es = cma.CMAEvolutionStrategy(Dimension * [0.5], 0.01, {'bounds': [0, 1]})
+    es = cma.CMAEvolutionStrategy(Dimension * [0.5], 0.1, {'bounds': [0, 1], 'popsize': 100})
     while not es.stop():
         candidate_solutions = es.ask()
         es.tell(candidate_solutions, [fitness_function(x, data, labels) for x in candidate_solutions])
         es.logger.add()
         es.disp() 
     es.result_pretty()
-    x = es.result[0]
+    x_best = es.result[0]
+
+    # print out the result
+    print("Best result:", x_best)
+    fitness = fitness_function(x_best, data, labels, verbose=True)
 
     return
 

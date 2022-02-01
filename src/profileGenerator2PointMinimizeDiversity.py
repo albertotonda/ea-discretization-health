@@ -76,12 +76,15 @@ def fitness_function(discretization, X_original, y, verbose=False) :
     # compute total (weighted) fitness
     fitness = 1.0 / (1.0 + fitness_accuracy) + fitness_diversity * 1e-5 # small weight, to make it (hopefully) much less relevant 
 
-    return fitness
+    if verbose == False :
+        return fitness
+    else :
+        return fitness, fitness_accuracy, fitness_diversity
 
 def main() :
 
     # uncomment to set a seed
-    seed = None
+    seeds = [10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000]
     # seed = 701607 # popsize=100, 0.99 accuracy and 52 different rows
     # seed = 756446 # popsize=100, 0.99 accuracy and 57 different rows
 
@@ -101,28 +104,39 @@ def main() :
     print("Dimension for CMA-ES is: %d" % Dimension)
 
     # setting up CMA-ES
-    options = {'bounds': [0, 1], 'popsize': 100} # boundaries between 0 and 1, size of the population set to 100
-    if seed is not None :
-        options["seed"] = seed
-    es = cma.CMAEvolutionStrategy(Dimension * [0.5], 0.1, options)
+    for seed in seeds :
+        print("\nNow starting experiment with seed %d" % seed)
+        options = {'bounds': [0, 1], 'popsize': 100} # boundaries between 0 and 1, size of the population set to 100
+        if seed is not None :
+            options["seed"] = seed
+        es = cma.CMAEvolutionStrategy(Dimension * [0.5], 0.1, options)
 
-    while not es.stop():
-        candidate_solutions = es.ask()
-        es.tell(candidate_solutions, [fitness_function(x, data, labels) for x in candidate_solutions])
-        es.logger.add()
-        es.disp() 
-    es.result_pretty()
-    x_best = es.result[0]
+        while not es.stop():
+            candidate_solutions = es.ask()
+            es.tell(candidate_solutions, [fitness_function(x, data, labels) for x in candidate_solutions])
+            es.logger.add()
+            es.disp() 
+        es.result_pretty()
+        x_best = es.result[0]
 
-    # print out the result
-    print("Best result:", x_best)
-    fitness = fitness_function(x_best, data, labels, verbose=True)
+        # print out the result
+        print("Best result:", x_best)
+        fitness, fitness_accuracy, fitness_diversity = fitness_function(x_best, data, labels, verbose=True)
 
-    # print out the best individual
-    print("Best individual:")
-    for i in range(0, x_best.shape[0]) :
-        print(x_best[i], end=" ")
-    print()
+        # print out the best individual
+        print("Best individual:")
+        for i in range(0, x_best.shape[0]) :
+            print(x_best[i], end=" ")
+        print()
+
+        # also, save best individual and its performance 
+        with open("2022-02-01-results.txt", "a") as fp :
+            fp.write("Seed %d; Best individual:" % seed)
+            for i in range(0, x_best.shape[0]) :
+                fp.write(" %.4f" % x_best[i])
+            fp.write("\n")
+            fp.write("Accuracy: %.4f; Number of different profiles: %d; Reduction: %.4f\n\n" %
+                    (fitness_accuracy, fitness_diversity, fitness_diversity / float(data.shape[0])))
 
     return
 

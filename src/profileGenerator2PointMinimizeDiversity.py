@@ -82,8 +82,8 @@ def main() :
 
     # uncomment to set a seed
     seed = None
-    # seed = 701607 # 0.99 accuracy and 52 different rows
-    seed = 756446 # 0.99 accuracy and 57 different rows
+    # seed = 701607 # popsize=100, 0.99 accuracy and 52 different rows
+    # seed = 756446 # popsize=100, 0.99 accuracy and 57 different rows
 
     print("Reading data...")
 

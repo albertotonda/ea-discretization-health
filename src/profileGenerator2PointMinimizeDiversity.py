@@ -6,10 +6,11 @@ import numpy as np
 import pandas as pd
 import sys
 
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, PassiveAggressiveClassifier, SGDClassifier
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.svm import SVC
 
 def discretize(discretization, X_original) :
 
@@ -33,7 +34,10 @@ def fitness_function(discretization, X_original, y, verbose=False) :
 
     # let's prepare the fitness function evaluating accuracy (or F1?)
     classifierList = [
-                [LogisticRegression(solver='lbfgs',), "LogisticRegression"],
+                [LogisticRegression(solver='lbfgs'), "LogisticRegression"],
+                [PassiveAggressiveClassifier(), "PassiveAggressive"],
+                [SGDClassifier(), "StochasticGradientDescent"],
+                [SVC(), "SupportVectorMachines"],
             ]
 
     # discretize dataset

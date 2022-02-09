@@ -137,7 +137,7 @@ def main() :
     print("Data dimensions: %d rows and %d columns" % (data.shape[0], data.shape[1]))
     print("Dimension for NSGA-II is: %d" % Dimension)
 
-    folder_results = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + "-" + sys.argv[0][:-3]
+    folder_results = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S") # + "-" + sys.argv[0][:-3]
     print("Creating folder to save results \"%s\"..." % folder_results)
     if not os.path.exists(folder_results) : os.makedirs(folder_results)
 
@@ -160,7 +160,12 @@ def main() :
                 num_selected = 200,
                 maximize = False,
                 bounder = inspyred.ec.Bounder(lower_bound=0, upper_bound=1),
-                max_generations = 10,
+                max_generations = 20,
+
+                # parameters of the variators/evolutionary operator
+                # Gaussian mutation
+                gaussian_mean = 0.0,
+                gaussian_stdev = 0.1,
                 
                 # all parts below this will be put into the "args" dictionary
                 Dimension = Dimension,

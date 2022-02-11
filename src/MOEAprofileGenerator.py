@@ -33,9 +33,8 @@ def discretize(discretization, X_original) :
 
     return X_discretized
 
-def fitness_function(discretization, X_original, y, verbose=False) : 
+def fitness_function(discretization, X_original, y, indexes, verbose=False) : 
 
-    n_splits = 10
     fitness = 0.0
 
     # let's prepare the fitness function evaluating accuracy (or F1?)
@@ -48,10 +47,6 @@ def fitness_function(discretization, X_original, y, verbose=False) :
 
     # discretize dataset
     X = discretize(discretization, X_original)
-
-    # prepare everything for the 10-fold cross-validation
-    skf = StratifiedKFold(n_splits=n_splits, shuffle=True)
-    indexes = [ [index, training, test] for index, [training, test] in enumerate(skf.split(X, y)) ]
 
     # iterate over the folds
     performance = []
@@ -76,6 +71,7 @@ def fitness_function(discretization, X_original, y, verbose=False) :
         print("Mean performance is %.4f" % fitness_accuracy)
         print("Performance:", performance)
 
+    # TODO check that at least one different profile exists for each class
     # check how many different rows are created by the discretization process
     # and use it as a second fitness
     unique_rows = np.unique(X, axis=0)
@@ -96,26 +92,47 @@ def evaluator(candidate, args) :
 
     X_original = args["X_original"]
     y = args["y"]
+    indexes = args["indexes"]
 
-    fitness1, fitness2 = fitness_function(candidate, X_original, y)
+    fitness1, fitness2 = fitness_function(candidate, X_original, y, indexes)
 
     return inspyred.ec.emo.Pareto([fitness1, fitness2])
 
 def generator(random, args) :
 
     Dimension = args["Dimension"]
-    candidate = [ random.uniform(0, 1) for i in range(0, Dimension) ]
+
+    # this code creates uniformly random floats in (0,1)
+    #candidate = [ random.uniform(0, 1) for i in range(0, Dimension) ]
+
+    # however, it could be better to start from [0.5, ..., 0.5] with a Gaussian perturbation
+    candidate = [ 0.5 + random.gauss(0.0, 0.1) for i in range(0, Dimension) ]
 
     return candidate
 
 def observer(population, num_generations, num_evaluations, args) :
 
-    print("Generation %d (%d evaluations): sample individual %s" % (num_generations, num_evaluations, str(population[0])))
+    # timing and estimate of completion; we can probably save some stats in 'args'
+    previous_time = args["time"]
+    current_time = datetime.datetime.now()
+    args["time"] = current_time
+
+    last_generation_time = current_time - previous_time
+
+    # to estimate time, we assume that the termination condition is based on the number of generations
+    max_generations = args["max_generations"]
+    estimated_time_to_completion = last_generation_time.total_seconds() * (max_generations - num_generations) / 60.0
+
+    print("Generation %d (%d evaluations, %.2f seconds in last generation, %.2f minutes estimated to completion): sample individual %s" % 
+            (num_generations, num_evaluations, last_generation_time.total_seconds(), estimated_time_to_completion, str(population[0])))
 
     return
 
 
 def main() :
+
+    # hard-coded stuff
+    n_splits = 10 # splits for the cross-validation
 
     # uncomment to set a seed
     seeds = [10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000]
@@ -144,23 +161,29 @@ def main() :
     # setting up NSGA-II
     for seed in seeds :
         
+        print("\nNow starting experiment with seed %d" % seed)
+
         # initialize pseudo-random number generator
         prng = Random()
         prng.seed(seed)
 
-        print("\nNow starting experiment with seed %d" % seed)
+        # prepare everything for the 10-fold cross-validation
+        print("Preparing splits for cross-validation...")
+        skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
+        indexes = [ [index, training, test] for index, [training, test] in enumerate(skf.split(data, labels)) ]
+
         nsga2 = inspyred.ec.emo.NSGA2(prng)
         nsga2.observer = observer
-        nsga2.variator = [inspyred.ec.variators.blend_crossover, inspyred.ec.variators.gaussian_mutation]
+        nsga2.variator = [inspyred.ec.variators.n_point_crossover, inspyred.ec.variators.gaussian_mutation]
         nsga2.terminator = inspyred.ec.terminators.generation_termination
         final_pop = nsga2.evolve(
                 generator = generator,
                 evaluator = evaluator,
-                pop_size = 100,
-                num_selected = 200,
+                pop_size = 200,
+                num_selected = 350,
                 maximize = False,
                 bounder = inspyred.ec.Bounder(lower_bound=0, upper_bound=1),
-                max_generations = 20,
+                max_generations = 1000,
 
                 # parameters of the variators/evolutionary operator
                 # Gaussian mutation
@@ -171,6 +194,8 @@ def main() :
                 Dimension = Dimension,
                 X_original = data,
                 y = labels,
+                indexes = indexes,
+                time = datetime.datetime.now(), 
 
                 )
 

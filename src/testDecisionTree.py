@@ -6,6 +6,7 @@ import sys
 
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import LeaveOneOut
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.tree import DecisionTreeClassifier, export_graphviz, plot_tree
 
 def main() :
@@ -16,6 +17,7 @@ def main() :
     output_figure = "tree.png"
 
     max_depth = 3
+    normalize_data = True
 
     # read feature names
     feature_names = []
@@ -26,6 +28,10 @@ def main() :
     # read all data
     X = np.genfromtxt(data_file, delimiter=',')
     y = np.genfromtxt(labels_file, delimiter=',')
+
+    # normalize data?
+    if normalize_data :
+        X = MinMaxScaler().fit_transform(X)
 
     # try a decision tree (with low depth?)
     print("Training classifier...")

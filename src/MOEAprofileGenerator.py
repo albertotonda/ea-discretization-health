@@ -126,6 +126,26 @@ def observer(population, num_generations, num_evaluations, args) :
     print("Generation %d (%d evaluations, %.2f seconds in last generation, %.2f minutes estimated to completion): sample individual %s" % 
             (num_generations, num_evaluations, last_generation_time.total_seconds(), estimated_time_to_completion, str(population[0])))
 
+    # also save current population
+    folder_results = args["folder_results"]
+    population_file = os.path.join(folder_results, "%d-all-individuals.csv" % args["seed"])
+
+    # if the file does not exist, write the header
+    if not os.path.exists(population_file) :
+        with open(population_file, "w") as fp :
+            header = "generation,accuracy,number_profiles,fitness_accuracy,fitness_profiles"
+            for i in range(0, args["Dimension"]) : header += ",threshold" + str(i)
+            fp.write(header + "\n")
+
+    # in any case, append the current population to the file
+    with open(population_file, "a") as fp :
+        for individual in population :
+            accuracy = (1.0 / individual.fitness[0]) - 1.0
+
+            fp.write(str(num_generations) + "," + str(accuracy) + "," + str(individual.fitness[1]) + "," + str(individual.fitness[0]) + "," + str(individual.fitness[1]))
+            for i in range(0, len(individual.candidate)) : fp.write("," + str(individual.candidate[i]))
+            fp.write("\n")
+
     return
 
 
@@ -136,6 +156,7 @@ def main() :
 
     # uncomment to set a seed
     seeds = [10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000]
+    seeds = [10000]
     # seed = 701607 # popsize=100, 0.99 accuracy and 52 different rows
     # seed = 756446 # popsize=100, 0.99 accuracy and 57 different rows
 
@@ -154,7 +175,7 @@ def main() :
     print("Data dimensions: %d rows and %d columns" % (data.shape[0], data.shape[1]))
     print("Dimension for NSGA-II is: %d" % Dimension)
 
-    folder_results = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S") # + "-" + sys.argv[0][:-3]
+    folder_results = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + "-MOEA" # + "-" + sys.argv[0][:-3]
     print("Creating folder to save results \"%s\"..." % folder_results)
     if not os.path.exists(folder_results) : os.makedirs(folder_results)
 
@@ -178,7 +199,8 @@ def main() :
         nsga2.terminator = inspyred.ec.terminators.generation_termination
         final_pop = nsga2.evolve(
                 generator = generator,
-                evaluator = evaluator,
+                evaluator = inspyred.ec.evaluators.parallel_evaluation_mp, # this is to activate parallel evaluations
+                mp_evaluator = evaluator,
                 pop_size = 200,
                 num_selected = 350,
                 maximize = False,
@@ -196,13 +218,15 @@ def main() :
                 y = labels,
                 indexes = indexes,
                 time = datetime.datetime.now(), 
+                seed = seed,
+                folder_results = folder_results,
 
                 )
 
         # now, we save the population as a CSV file, but we also save some information for plots
         accuracies = []
         numbers_of_profiles = []
-        with open(os.path.join(folder_results, "experiment-%s.csv" % seed), "w") as fp :
+        with open(os.path.join(folder_results, "%d-final-pareto-front.csv" % seed), "w") as fp :
 
             # header
             header = "accuracy,number_profiles,fitness_accuracy,fitness_profiles"
@@ -230,8 +254,6 @@ def main() :
         ax.legend(loc='best')
         plt.savefig(os.path.join(folder_results, "experiment-%d.png" % seed), dpi=300)
         plt.close(fig)
-
-        sys.exit(0) # TODO REMOVE THIS
 
     return
 

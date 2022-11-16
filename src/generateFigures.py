@@ -13,7 +13,8 @@ sns.set_theme() # set seaborn style
 
 def main() :
 
-    directories = ["2022-09-30-09-13-11-MOEA", "2022-10-26-11-46-27-MOEA"]
+    #directories = ["2022-09-30-09-13-11-MOEA", "2022-10-26-11-46-27-MOEA"]
+    directories = ["2022-11-15-16-55-29-MOEA"]
     all_df = []
 
     # go over the directories, collect all the data
@@ -41,14 +42,39 @@ def main() :
     ax.scatter(profiles, accuracies, marker='.', color='blue', alpha=0.3)
     
     ax.set_xlabel("Number of different profiles")
-    ax.set_ylabel("Accuracy")
+    ax.set_ylabel("F1")
     ax.set_title("Pareto fronts of 30 experiments")
 
-    plt.savefig("pareto-fronts.png", dpi=300)
+    plt.savefig("figures/pareto-fronts.png", dpi=300)
     plt.close(fig)
 
 
     # another version: size of point is scaled on the number of times it appears
+    # step 0: here we want to do something else, use the expert discretization and evaluate it
+    # load data
+    dfData = pd.read_csv("../data/data_0.csv", header=None, sep=',')
+    data = dfData.values
+    dfLabels = pd.read_csv("../data/labels.csv", header=None)
+    labels = dfLabels.values.ravel()
+
+    from sklearn.model_selection import StratifiedKFold
+    skf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
+    indexes = [ [index, training, test] for index, [training, test] in enumerate(skf.split(data, labels)) ]
+
+    from MOEAprofileGenerator import discretize, fitness_function
+    discretization = [89.8571428571429, 45.0714285714286, 70.8571428571429, 55.5714285714286, 72.0714285714286, 67.5, 0.642857142857143, 4.42857142857143, 24.2857142857143, 7.5, 12.7142857142857, 7230.92857142857]
+    fitness, expert_f1, expert_n_profiles = fitness_function(discretization, data, labels, indexes, verbose=True) 
+    print("Expert solution: F1=%.4f, n_profiles=%d" % (expert_f1, expert_n_profiles))
+
+    # step 0.5: the same, but the automated discretization found in the previous paper
+    discretization = [0.2869, 0.2817, 0.6731, 0.4580, 0.1622, 0.2013, 0.1101, 0.2379, 0.6528, 0.9902, 0.9191, 0.9880]
+    # this time, we need to rescale the data
+    from sklearn.preprocessing import MinMaxScaler
+    scaler = MinMaxScaler()
+    X_scaled = scaler.fit_transform(data)
+    fitness, previous_f1, previous_n_profiles = fitness_function(discretization, X_scaled, labels, indexes, verbose=True)
+    print("Previous single-objective best solution: F1=%.4f, n_profiles=%d" % (previous_f1, previous_n_profiles))
+
     # step 1: frequency, how many times does the exact same combination of accuracy and number of profiles appear?
     frequency_dict = {}
     for i in range(0, len(accuracies)) :
@@ -57,6 +83,10 @@ def main() :
             frequency_dict[key] = 1
         else :
             frequency_dict[key] += 1
+
+    # now, let's prune all results with F1=0.0 (they are not interesting)
+    keys_to_remove = [ key for key, value in frequency_dict.items() if key[1] < 0.1 ]
+    for key in keys_to_remove : del frequency_dict[key]
 
     # find highest frequency
     max_frequency = max(frequency_dict.values())
@@ -73,16 +103,20 @@ def main() :
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-    ax.scatter(profiles, accuracies, marker='o', color='blue', alpha=0.3, s=sizes, label='Candidate solution')
+    ax.scatter(profiles, accuracies, marker='o', color='blue', alpha=0.3, s=sizes, label='Candidate solutions')
+    ax.scatter(expert_n_profiles, expert_f1, marker='^', color='orange', label='Expert-designed solution')
+    ax.scatter(previous_n_profiles, previous_f1, marker='x', color='red', label='Best solution in [29]')
+    
     ax.invert_yaxis()
+    #ax.set_xscale('log')
 
     ax.set_xlabel("Number of different profiles")
-    ax.set_ylabel("Accuracy")
+    ax.set_ylabel("F1 (best values bottom-up)")
     ax.set_title("Candidate solutions on the Pareto fronts of 30 experiments")
     #ax.legend(loc='best')
-    ax.legend(loc='upper right', scatterpoints=3, labelspacing=1)
+    ax.legend(loc='upper right', scatterpoints=1)
 
-    plt.savefig("pareto-fronts-different-size.png", dpi=300)
+    plt.savefig("figures/pareto-fronts-different-size.png", dpi=300)
     plt.close(fig)
 
     return

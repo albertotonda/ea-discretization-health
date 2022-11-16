@@ -62,8 +62,8 @@ def fitness_function(discretization, X_original, y, indexes, verbose=False) :
             classifier.fit(X_train, y_train)
             y_test_pred = classifier.predict(X_test)
 
-            #performance.append(f1_score(y_test, y_test_pred))
-            performance.append(accuracy_score(y_test, y_test_pred))
+            performance.append(f1_score(y_test, y_test_pred))
+            #performance.append(accuracy_score(y_test, y_test_pred))
 
     fitness_accuracy = np.mean(performance)
 
